@@ -1,0 +1,26 @@
+name: karat-card-activity
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: karat
+      POSTGRES_PASSWORD: karat
+      POSTGRES_DB: karat_card_activity
+    # 5433 on the host so this never fights a local Postgres on 5432.
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    # `docker compose up --wait` blocks on this, so `db:up && db:migrate` in one
+    # line cannot race the server's first connection.
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U karat -d karat_card_activity']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+volumes:
+  postgres-data:

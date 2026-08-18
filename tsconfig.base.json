@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+
+    // Correctness. These are the settings that catch bugs rather than style.
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "useUnknownInCatchVariables": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Unused code is reported by the compiler, not just the linter, so it cannot
+    // be warned away. A leading underscore opts a parameter out.
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+
+    // Interop and emit.
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "declaration": false,
+    "pretty": true
+
+    // Deliberately not set here, and set per workspace instead:
+    //
+    // - "module" / "moduleResolution": the API emits CommonJS for Node, the web
+    //   app is bundled by Vite, and the two need different values.
+    // - "paths": the "@/*" alias points at each workspace's own src, and paths
+    //   in an extended config resolve against the file that declares them.
+    // - "verbatimModuleSyntax": it would let a class reach Nest's DI as a
+    //   type-only import, which makes emitDecoratorMetadata record Object
+    //   instead of the class and breaks injection at runtime.
+    // - "include" / "exclude": these resolve against the config that declares
+    //   them, so a base value would point at the repo root from every workspace.
+  }
+}

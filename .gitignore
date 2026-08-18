@@ -1,0 +1,27 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+build/
+*.tsbuildinfo
+
+# turborepo
+.turbo/
+
+# tests
+coverage/
+
+# secrets. .env.example is the committed template.
+.env
+.env.*
+!.env.example
+
+# generated Prisma client, rebuilt by `prisma generate`
+apps/api/src/generated/
+
+# editors and os
+.DS_Store
+.idea/
+.vscode/
+*.log

@@ -1,0 +1,37 @@
+{
+  "name": "karat-card-activity",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Real-time card activity and spend insights for Stripe Issuing cardholders",
+  "license": "UNLICENSED",
+  "packageManager": "npm@10.9.2",
+  "engines": {
+    "node": "^20.19.0 || ^22.12.0 || >=24.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d --wait",
+    "db:migrate": "npm run db:migrate --workspace @karat/api",
+    "db:seed": "npm run db:seed --workspace @karat/api",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "3.9.6",
+    "turbo": "2.10.10",
+    "typescript": "6.0.3"
+  },
+  "overrides": {
+    "typescript": "6.0.3"
+  }
+}
