@@ -1,0 +1,168 @@
+// Normalized read model for the cardholder dashboard. Stripe Issuing is the
+// system of record; every row here is a projection of a Stripe object that
+// arrived over a webhook, and any conflict resolves in Stripe's favour.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum CardStatus {
+  active
+  inactive
+  canceled
+}
+
+enum AuthorizationStatus {
+  pending
+  closed
+  reversed
+  expired
+}
+
+enum TransactionType {
+  capture
+  refund
+}
+
+// Our own spend buckets, mapped from Stripe's merchant category code. Stripe's
+// own label is kept alongside so a bad mapping can always be traced back.
+enum SpendCategory {
+  food_drink
+  groceries
+  shopping
+  transport
+  travel
+  entertainment
+  software
+  utilities
+  health
+  professional_services
+  fees
+  other
+}
+
+model Cardholder {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  stripeId  String   @unique @map("stripe_id")
+  name      String
+  email     String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  cards          Card[]
+  authorizations Authorization[]
+  transactions   Transaction[]
+
+  @@map("cardholders")
+}
+
+model Card {
+  id           String     @id @default(uuid(7)) @db.Uuid
+  stripeId     String     @unique @map("stripe_id")
+  cardholderId String     @map("cardholder_id") @db.Uuid
+  last4        String
+  brand        String
+  status       CardStatus
+  currency     String
+
+  cardholder     Cardholder      @relation(fields: [cardholderId], references: [id], onDelete: Cascade)
+  authorizations Authorization[]
+  transactions   Transaction[]
+
+  @@map("cards")
+}
+
+// The swipe itself, raised while the money is only on hold. Stays pending until
+// it settles into a transaction or is reversed.
+model Authorization {
+  id               String              @id @default(uuid(7)) @db.Uuid
+  stripeId         String              @unique @map("stripe_id")
+  cardId           String              @map("card_id") @db.Uuid
+  cardholderId     String              @map("cardholder_id") @db.Uuid
+  /// Minor units, never a float.
+  amount           BigInt
+  currency         String
+  status           AuthorizationStatus
+  merchantName     String              @map("merchant_name")
+  /// Stripe's raw merchant category code.
+  merchantMcc      String              @map("merchant_mcc")
+  /// Stripe's own category label, kept for tracing our mapping.
+  merchantCategory String              @map("merchant_category")
+  category         SpendCategory
+  /// Stripe's clock for when the swipe happened.
+  occurredAt       DateTime            @map("occurred_at") @db.Timestamptz(3)
+  /// Timestamp of the newest event applied to this row. Guards the upsert so a
+  /// replayed or out-of-order event cannot regress newer data.
+  lastEventAt      DateTime            @map("last_event_at") @db.Timestamptz(3)
+  raw              Json                @db.JsonB
+
+  card       Card       @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  cardholder Cardholder @relation(fields: [cardholderId], references: [id], onDelete: Cascade)
+
+  // Feed pagination: newest first, tie-broken by id so the cursor is total.
+  @@index([cardholderId, occurredAt(sort: Desc), id(sort: Desc)])
+  // Pending count and amount for the insights tiles.
+  @@index([cardholderId, status])
+  // Feed filtered by category.
+  @@index([cardholderId, category, occurredAt(sort: Desc)])
+  @@map("authorizations")
+}
+
+// Money actually moving: a capture when the cardholder is charged, a refund
+// when they are paid back.
+model Transaction {
+  id               String          @id @default(uuid(7)) @db.Uuid
+  stripeId         String          @unique @map("stripe_id")
+  /// Stripe's authorization id, deliberately not a foreign key. An unlinked
+  /// refund carries none, and a capture can arrive before the authorization it
+  /// names, both of which a constraint would reject.
+  authorizationId  String?         @map("authorization_id")
+  cardId           String          @map("card_id") @db.Uuid
+  cardholderId     String          @map("cardholder_id") @db.Uuid
+  /// Minor units, signed: a refund is stored negative so settled spend is a
+  /// plain sum and no aggregate can silently omit one.
+  amount           BigInt
+  currency         String
+  type             TransactionType
+  merchantName     String          @map("merchant_name")
+  /// Stripe's raw merchant category code.
+  merchantMcc      String          @map("merchant_mcc")
+  /// Stripe's own category label, kept for tracing our mapping.
+  merchantCategory String          @map("merchant_category")
+  category         SpendCategory
+  occurredAt       DateTime        @map("occurred_at") @db.Timestamptz(3)
+  /// Guards the upsert. See Authorization.lastEventAt.
+  lastEventAt      DateTime        @map("last_event_at") @db.Timestamptz(3)
+  raw              Json            @db.JsonB
+
+  card       Card       @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  cardholder Cardholder @relation(fields: [cardholderId], references: [id], onDelete: Cascade)
+
+  @@index([cardholderId, occurredAt(sort: Desc), id(sort: Desc)])
+  @@index([cardholderId, category, occurredAt(sort: Desc)])
+  // Resolving a capture back to the authorization it settles.
+  @@index([authorizationId])
+  @@map("transactions")
+}
+
+// Every raw event received, keyed by Stripe's event id. Delivery is
+// at-least-once, so this table is what makes a replay a no-op.
+model StripeEvent {
+  id          String    @id
+  type        String
+  payload     Json      @db.JsonB
+  receivedAt  DateTime  @default(now()) @map("received_at") @db.Timestamptz(3)
+  /// Null until the event has been normalized into the read model.
+  processedAt DateTime? @map("processed_at") @db.Timestamptz(3)
+  attempts    Int       @default(0)
+  lastError   String?   @map("last_error")
+
+  // The replay command looks for events that were never normalized. Prisma
+  // cannot express a partial index, so this covers all rows rather than just
+  // the nulls, which is a few megabytes traded for staying schema-native.
+  @@index([processedAt])
+  @@map("stripe_events")
+}

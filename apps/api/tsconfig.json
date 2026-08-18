@@ -1,0 +1,27 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // CommonJS output for Node, which is what Nest's DI and decorators expect.
+    // node10 resolution is deprecated in TS 6, so this pairing replaces it.
+    "module": "node18",
+    "moduleResolution": "node16",
+
+    // Nest reads constructor parameter types out of decorator metadata to
+    // resolve providers, and leaves injected properties to be assigned after
+    // construction rather than in the constructor.
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "strictPropertyInitialization": false,
+
+    // paths resolve relative to this file, so TS 6 needs no deprecated baseUrl.
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "types": ["node"],
+
+    // Emit belongs to `nest build` and its own tsconfig.build.json, so this
+    // config exists to type-check and to drive the editor.
+    "noEmit": true
+  },
+  "include": ["src", "prisma", "prisma.config.ts"]
+}

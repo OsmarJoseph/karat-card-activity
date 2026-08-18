@@ -17,9 +17,6 @@ coverage/
 .env.*
 !.env.example
 
-# generated Prisma client, rebuilt by `prisma generate`
-apps/api/src/generated/
-
 # editors and os
 .DS_Store
 .idea/

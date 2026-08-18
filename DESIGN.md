@@ -244,8 +244,6 @@ The write path claims to be idempotent and order-independent, so those are the t
 
 ### Phases
 
-Each phase touches at most 5 files, and is verified before the next one starts.
-
 0. **Scaffold.** Root `package.json` (workspaces), `turbo.json`, `tsconfig.base.json`, `docker-compose.yml`, `.env.example`
 1. **Schema.** Prisma schema (Data model), initial migration, seed skeleton, Prisma module
 2. **Processor port.** `CardProcessor` interface, `StripeCardProcessor` (list + pagination), config module (env + cardholder id)
