@@ -16,28 +16,32 @@ in [DESIGN.md](./DESIGN.md).
 
 ## Run it
 
-Needs Docker and Node 20.19+, 22.12+ or 24+. No Stripe account is needed for this part.
+Needs Docker and Node 20.19+, 22.12+ or 24+. No Stripe account is needed at any point.
 
 ```bash
-cp .env.example .env      # the placeholder Stripe values are enough to boot
+cp .env.example .env      # the placeholders are enough, nothing to fill in
 npm install
 npm run db:up             # Postgres 16, host port 5433
 npm run db:migrate
 npm run db:seed           # the one cardholder this deployment serves
-npm run db:demo           # sample activity, so the dashboard has something to show
 npm run dev               # api on :3000, web on :5173
 ```
 
-Open <http://localhost:5173>.
-
-`npm run db:demo` is safe to re-run. It loads two pending authorizations, four spend
-categories, a refund large enough to turn its category net negative, and one transaction
-old enough to sit outside "This month" but inside "90 days". Between them that covers
-every state the dashboard draws. Clear it whenever you like:
+Open <http://localhost:5173>, then fill it from a second shell, since `dev` keeps the
+first one:
 
 ```bash
-docker compose exec -T postgres psql -U karat -d karat_card_activity \
-  -c "DELETE FROM cards WHERE stripe_id = 'ic_demo'"
+npm run webhook:seed      # sample activity, delivered as signed webhooks
+```
+
+That fills the dashboard the same way production does, by posting signed events at the
+webhook endpoint.
+
+To watch it update live, one purchase at a time, each row landing pending and settling in
+place a few seconds later:
+
+```bash
+npm run webhook:live
 ```
 
 ## The API contract
@@ -68,5 +72,6 @@ With the API running, the spec is also served at
 | `npm run db:reset`          | Drops the volume, so migrate and seed again after |
 | `npm run db:migrate`        | Applies migrations                                |
 | `npm run db:seed`           | Creates the configured cardholder                 |
-| `npm run db:demo`           | Loads sample activity                             |
+| `npm run webhook:seed`      | Sample activity, as signed webhooks               |
+| `npm run webhook:live`      | Paced purchases, to watch the feed move           |
 | `npm run db:studio`         | Prisma Studio, to browse the tables               |
