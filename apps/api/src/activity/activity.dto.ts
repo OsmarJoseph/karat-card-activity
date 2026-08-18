@@ -30,6 +30,8 @@ const activityItemSchema = z
     formattedAmount: z.string(),
     merchantName: z.string(),
     category: z.enum(SpendCategory),
+    /** Sent with the row so the label lives in one place rather than in every client. */
+    categoryLabel: z.string(),
     occurredAt: z.iso.datetime(),
   })
   // The id names the OpenAPI component, and so the type Orval generates from it.

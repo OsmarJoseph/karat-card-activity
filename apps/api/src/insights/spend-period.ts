@@ -7,8 +7,13 @@ export interface DateRange {
   end: Date
 }
 
+/** How the trend is bucketed. Ninety daily bars are unreadable, so long periods widen. */
+export const SPEND_BUCKETS = ['day', 'week'] as const
+export type SpendBucket = (typeof SPEND_BUCKETS)[number]
+
 export interface ResolvedPeriod extends DateRange {
   label: string
+  bucket: SpendBucket
   /** The comparable stretch immediately before, for the change figure. */
   previous: DateRange
 }
@@ -30,6 +35,12 @@ const ROLLING_DAYS: Record<Exclude<InsightPeriod, 'current_month'>, number> = {
   last_90d: 90,
 }
 
+const BUCKETS: Record<InsightPeriod, SpendBucket> = {
+  current_month: 'day',
+  last_30d: 'day',
+  last_90d: 'week',
+}
+
 /** Pure and taking `now`, so the boundaries are testable without moving the clock. */
 export function resolvePeriod(period: InsightPeriod, now: Date): ResolvedPeriod {
   if (period === 'current_month') {
@@ -41,6 +52,7 @@ export function resolvePeriod(period: InsightPeriod, now: Date): ResolvedPeriod 
       start,
       end: now,
       label: MONTH_LABEL.format(start),
+      bucket: BUCKETS[period],
       previous: {
         start: previousStart,
         // The same stretch of the previous month, so a third of August is not measured
@@ -59,6 +71,7 @@ export function resolvePeriod(period: InsightPeriod, now: Date): ResolvedPeriod 
     start,
     end: now,
     label: `Last ${days} days`,
+    bucket: BUCKETS[period],
     previous: { start: new Date(start.getTime() - span), end: start },
   }
 }

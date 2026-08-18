@@ -192,6 +192,9 @@
               "other"
             ]
           },
+          "categoryLabel": {
+            "type": "string"
+          },
           "occurredAt": {
             "type": "string",
             "format": "date-time",
@@ -208,6 +211,7 @@
           "formattedAmount",
           "merchantName",
           "category",
+          "categoryLabel",
           "occurredAt"
         ],
         "additionalProperties": false
@@ -363,6 +367,46 @@
         ],
         "additionalProperties": false
       },
+      "SpendTrend_Output": {
+        "type": "object",
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week"
+            ]
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "startsAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "amount": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "startsAt",
+                "amount"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "bucket",
+          "points"
+        ],
+        "additionalProperties": false
+      },
       "Insights_Output": {
         "type": "object",
         "properties": {
@@ -380,13 +424,17 @@
             "items": {
               "$ref": "#/components/schemas/SpendBreakdownItem_Output"
             }
+          },
+          "trend": {
+            "$ref": "#/components/schemas/SpendTrend_Output"
           }
         },
         "required": [
           "period",
           "metrics",
           "pending",
-          "breakdown"
+          "breakdown",
+          "trend"
         ],
         "additionalProperties": false
       }

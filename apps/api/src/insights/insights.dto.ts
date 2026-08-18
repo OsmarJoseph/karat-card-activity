@@ -1,7 +1,7 @@
 import { SpendCategory } from '@prisma/client'
 import { createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
-import { INSIGHT_PERIODS } from '@/insights/spend-period'
+import { INSIGHT_PERIODS, SPEND_BUCKETS } from '@/insights/spend-period'
 
 const insightsQuerySchema = z.object({
   period: z.enum(INSIGHT_PERIODS).default('current_month'),
@@ -46,6 +46,19 @@ const breakdownItemSchema = z
   })
   .meta({ id: 'SpendBreakdownItem' })
 
+const spendTrendSchema = z
+  .object({
+    bucket: z.enum(SPEND_BUCKETS),
+    /** Unbroken and ascending, including buckets with no spend. */
+    points: z.array(
+      z.object({
+        startsAt: z.iso.datetime(),
+        amount: z.int(),
+      }),
+    ),
+  })
+  .meta({ id: 'SpendTrend' })
+
 const insightsSchema = z
   .object({
     period: periodSchema,
@@ -54,6 +67,7 @@ const insightsSchema = z
     pending: pendingSchema,
     /** Largest first, and only categories with activity in the period. */
     breakdown: z.array(breakdownItemSchema),
+    trend: spendTrendSchema,
   })
   .meta({ id: 'Insights' })
 

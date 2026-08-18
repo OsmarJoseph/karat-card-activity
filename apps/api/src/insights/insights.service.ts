@@ -17,10 +17,11 @@ export class InsightsService {
     const cardholderId = await this.cardholder.resolveId()
     const period = resolvePeriod(query.period, new Date())
 
-    const [totals, breakdown, pending] = await Promise.all([
+    const [totals, breakdown, pending, trend] = await Promise.all([
       this.insights.findSettledTotals(cardholderId, period),
       this.insights.findCategoryTotals(cardholderId, period),
       this.insights.findPendingTotals(cardholderId),
+      this.insights.findSpendTrend(cardholderId, period),
     ])
 
     return {
@@ -44,6 +45,13 @@ export class InsightsService {
         percent: percentOf(row.amount, totals.settledSpend),
         count: row.count,
       })),
+      trend: {
+        bucket: period.bucket,
+        points: trend.map((point) => ({
+          startsAt: point.startsAt.toISOString(),
+          amount: point.amount,
+        })),
+      },
     }
   }
 }

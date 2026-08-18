@@ -22,6 +22,11 @@ export interface PendingTotals {
   amount: number
 }
 
+export interface SpendPoint {
+  startsAt: Date
+  amount: number
+}
+
 /** Postgres answers SUM and COUNT as bigint whatever the column width. */
 type Aggregated<T> = { [K in keyof T]: T[K] extends number ? bigint : T[K] }
 
@@ -72,6 +77,39 @@ export class InsightsRepository {
       amount: Number(row.amount),
       count: Number(row.count),
     }))
+  }
+
+  /**
+   * Spend per bucket, with empty buckets returned as zero. The chart needs an unbroken
+   * series: a query returning only buckets that have rows would draw a quiet week as a
+   * narrower one rather than an empty one.
+   */
+  async findSpendTrend(cardholderId: string, period: ResolvedPeriod): Promise<SpendPoint[]> {
+    const step = period.bucket === 'day' ? '1 day' : '1 week'
+
+    const rows = await this.prisma.$queryRaw<Array<Aggregated<SpendPoint>>>`
+      WITH buckets AS (
+        SELECT generate_series(
+          date_trunc(${period.bucket}::text, ${period.start}::timestamptz, 'UTC'),
+          ${period.end}::timestamptz,
+          ${step}::interval
+        ) AS starts_at
+      )
+      SELECT b.starts_at AS "startsAt", COALESCE(SUM(t.amount), 0) AS amount
+      FROM buckets b
+      LEFT JOIN transactions t
+        ON t.cardholder_id = ${cardholderId}::uuid
+       AND t.occurred_at >= b.starts_at
+       AND t.occurred_at < b.starts_at + ${step}::interval
+       -- Bounded by the period too, because truncating to a week can start the first
+       -- bucket before it and would otherwise pull in earlier spend.
+       AND t.occurred_at >= ${period.start}::timestamptz
+       AND t.occurred_at < ${period.end}::timestamptz
+      GROUP BY b.starts_at
+      ORDER BY b.starts_at
+    `
+
+    return rows.map((row) => ({ startsAt: row.startsAt, amount: Number(row.amount) }))
   }
 
   /** Deliberately not period-scoped: pending is a statement about the present. */

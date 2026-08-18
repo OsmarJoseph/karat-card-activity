@@ -4,6 +4,7 @@ import { ActivityFeedRepository, type ActivityFeedRow } from '@/activity/activit
 import type { ActivityItem, ActivityPage, ActivityQuery } from '@/activity/activity.dto'
 import { CurrentCardholderService } from '@/cardholder/current-cardholder.service'
 import { formatMinorUnits } from '@/common/money'
+import { SPEND_CATEGORY_LABELS } from '@/common/spend-category'
 
 @Injectable()
 export class ActivityService {
@@ -51,6 +52,7 @@ function toActivityItem(row: ActivityFeedRow): ActivityItem {
     formattedAmount: formatMinorUnits(row.amount, row.currency),
     merchantName: row.merchantName,
     category: row.category,
+    categoryLabel: SPEND_CATEGORY_LABELS[row.category],
     occurredAt: row.occurredAt.toISOString(),
   }
 }
