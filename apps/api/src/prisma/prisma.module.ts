@@ -1,4 +1,5 @@
 import { Global, Module } from '@nestjs/common'
+import { ConfigModule } from '@/config/config.module'
 import { PrismaService } from '@/prisma/prisma.service'
 
 /**
@@ -7,6 +8,9 @@ import { PrismaService } from '@/prisma/prisma.service'
  */
 @Global()
 @Module({
+  // Imported explicitly rather than relying on a global, so the dependency on
+  // configuration is visible in the module graph.
+  imports: [ConfigModule],
   providers: [PrismaService],
   exports: [PrismaService],
 })
