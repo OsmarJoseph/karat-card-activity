@@ -10,7 +10,7 @@
     "build": {
       "dependsOn": ["^build", "db:generate"],
       "env": ["VITE_*"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", "openapi.json"]
     },
     "typecheck": {
       "dependsOn": ["^build", "db:generate"],

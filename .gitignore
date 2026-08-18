@@ -9,6 +9,9 @@ build/
 # turborepo
 .turbo/
 
+# generated api client, rebuilt by orval from apps/api/openapi.json
+apps/web/src/api/generated.ts
+
 # tests
 coverage/
 

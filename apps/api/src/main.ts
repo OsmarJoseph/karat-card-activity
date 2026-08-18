@@ -1,12 +1,10 @@
 import { Logger } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import type { NestExpressApplication } from '@nestjs/platform-express'
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
-import { cleanupOpenApiDoc } from 'nestjs-zod'
+import { SwaggerModule } from '@nestjs/swagger'
 import { AppModule } from '@/app.module'
 import { AppConfigService } from '@/config/app-config.service'
-
-const DOCS_PATH = 'docs'
+import { API_PREFIX, DOCS_PATH, buildOpenApiDocument } from '@/openapi'
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -17,7 +15,7 @@ async function bootstrap(): Promise<void> {
 
   const config = app.get(AppConfigService)
 
-  app.setGlobalPrefix('api/v1')
+  app.setGlobalPrefix(API_PREFIX)
   app.enableCors({
     // Spread because the config exposes a readonly array.
     origin: [...config.corsOrigins],
@@ -25,26 +23,13 @@ async function bootstrap(): Promise<void> {
   })
   // Without this, onModuleDestroy never runs and the Postgres pool is left open.
   app.enableShutdownHooks()
-  setupOpenApi(app)
+  SwaggerModule.setup(DOCS_PATH, app, buildOpenApiDocument(app), { useGlobalPrefix: true })
 
   await app.listen(config.port)
 
   const logger = new Logger('Bootstrap')
-  logger.log(`API listening on http://localhost:${config.port}/api/v1`)
-  logger.log(`OpenAPI spec at http://localhost:${config.port}/api/v1/${DOCS_PATH}-json`)
-}
-
-/** Orval generates the client from this spec. Must run after setGlobalPrefix. */
-function setupOpenApi(app: NestExpressApplication): void {
-  const spec = new DocumentBuilder()
-    .setTitle('Karat card activity')
-    .setDescription('Card activity and spend insights for one Stripe Issuing cardholder.')
-    .setVersion('1')
-    .build()
-
-  // cleanupOpenApiDoc resolves the zod schemas behind the DTOs into named components.
-  const document = cleanupOpenApiDoc(SwaggerModule.createDocument(app, spec))
-  SwaggerModule.setup(DOCS_PATH, app, document, { useGlobalPrefix: true })
+  logger.log(`API listening on http://localhost:${config.port}/${API_PREFIX}`)
+  logger.log(`OpenAPI spec at http://localhost:${config.port}/${API_PREFIX}/${DOCS_PATH}-json`)
 }
 
 void bootstrap()

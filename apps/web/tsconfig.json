@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Vite bundles, so modules stay ESM and resolution follows the bundler's rules.
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+
+    // Safe here in a way it is not in the API: nothing in the browser reads decorator
+    // metadata, so a type-only import cannot break dependency injection.
+    "verbatimModuleSyntax": true,
+
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "types": ["vite/client"],
+
+    // Vite owns emit.
+    "noEmit": true
+  },
+  "include": ["src", "vite.config.ts", "orval.config.ts"]
+}

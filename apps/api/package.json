@@ -9,9 +9,10 @@
     "db:seed": "tsx --env-file=../../.env prisma/seed.ts",
     "db:studio": "prisma studio",
     "typecheck": "tsc --noEmit",
-    "build": "nest build",
+    "build": "nest build && npm run openapi",
     "dev": "nest start --watch",
-    "start": "node dist/main.js"
+    "start": "node dist/main.js",
+    "openapi": "node dist/emit-openapi.js"
   },
   "dependencies": {
     "@nestjs/common": "11.2.1",

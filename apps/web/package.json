@@ -1,0 +1,28 @@
+{
+  "name": "@karat/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "api:generate": "orval",
+    "dev": "npm run api:generate && vite",
+    "build": "npm run api:generate && vite build",
+    "typecheck": "npm run api:generate && tsc --noEmit",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.101.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@karat/api": "*",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.4",
+    "@vitejs/plugin-react": "6.0.5",
+    "orval": "8.24.0",
+    "vite": "8.2.1",
+    "vitest": "4.1.11"
+  }
+}

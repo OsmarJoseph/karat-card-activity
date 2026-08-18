@@ -1,4 +1,5 @@
 import { Controller, HttpCode, HttpStatus, Logger, Post, Req, UseGuards } from '@nestjs/common'
+import { ApiExcludeEndpoint } from '@nestjs/swagger'
 import { ActivityEventBus } from '@/activity/activity-event-bus'
 import { IngestionService } from '@/ingestion/ingestion.service'
 import { StripeEventRepository } from '@/webhooks/stripe-event.repository'
@@ -26,6 +27,9 @@ export class StripeWebhookController {
   @Post()
   @HttpCode(HttpStatus.OK)
   @UseGuards(StripeSignatureGuard)
+  // The spec is the browser's contract, and this endpoint answers to Stripe. Leaving it
+  // out keeps the generated client to what the dashboard actually calls.
+  @ApiExcludeEndpoint()
   async receive(@Req() request: StripeWebhookRequest): Promise<WebhookAck> {
     const event = verifiedStripeEvent(request)
 

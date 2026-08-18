@@ -7,3 +7,5 @@ package-lock.json
 
 # generated, not hand-edited
 apps/api/prisma/migrations/
+apps/api/openapi.json
+apps/web/src/api/generated.ts

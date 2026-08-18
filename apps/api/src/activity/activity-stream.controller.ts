@@ -1,4 +1,5 @@
 import { Controller, Sse, type MessageEvent } from '@nestjs/common'
+import { ApiExcludeEndpoint } from '@nestjs/swagger'
 import { Observable, defer, map, merge, switchMap, timer } from 'rxjs'
 import { ActivityEventBus } from '@/activity/activity-event-bus'
 import { CurrentCardholderService } from '@/cardholder/current-cardholder.service'
@@ -14,6 +15,9 @@ export class ActivityStreamController {
   ) {}
 
   @Sse('stream')
+  // Left out of the spec because a generated fetch hook cannot express a connection that
+  // never completes. The browser reads this with EventSource, not with the query client.
+  @ApiExcludeEndpoint()
   stream(): Observable<MessageEvent> {
     const changes = defer(() => this.cardholder.resolveId()).pipe(
       switchMap((cardholderId) => this.bus.streamFor(cardholderId)),
