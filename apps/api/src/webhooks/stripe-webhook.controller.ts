@@ -1,4 +1,5 @@
 import { Controller, HttpCode, HttpStatus, Logger, Post, Req, UseGuards } from '@nestjs/common'
+import { ActivityEventBus } from '@/activity/activity-event-bus'
 import { IngestionService } from '@/ingestion/ingestion.service'
 import { StripeEventRepository } from '@/webhooks/stripe-event.repository'
 import {
@@ -19,6 +20,7 @@ export class StripeWebhookController {
   constructor(
     private readonly events: StripeEventRepository,
     private readonly ingestion: IngestionService,
+    private readonly activityEvents: ActivityEventBus,
   ) {}
 
   @Post()
@@ -36,7 +38,17 @@ export class StripeWebhookController {
     try {
       const result = await this.ingestion.ingest(event)
       await this.events.markProcessed(event.id)
-      this.logger.log(`${duplicate ? 'Replayed' : 'Received'} ${event.type} ${event.id}: ${result}`)
+      this.logger.log(
+        `${duplicate ? 'Replayed' : 'Received'} ${event.type} ${event.id}: ${result.outcome}`,
+      )
+
+      // Only once the row is committed. A stale delivery lost a race to a newer event
+      // and changed nothing, so it is skipped. A duplicate still nudges: the first
+      // attempt may have applied the row and died before it got this far, and a
+      // redundant refetch is cheaper than a change no browser hears about.
+      if (result.outcome === 'applied' && result.changedCardholderId) {
+        this.activityEvents.publish(result.changedCardholderId)
+      }
     } catch (error: unknown) {
       const reason = error instanceof Error ? error.message : 'unknown failure'
       await this.events.markFailed(event.id, reason)

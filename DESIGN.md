@@ -250,7 +250,7 @@ The write path claims to be idempotent and order-independent, so those are the t
 3. **Webhook ingress.** Controller (raw body), signature guard, `stripe_events` repo, `rawBody: true` bootstrap
 4. **Ingestion.** Authorization and transaction normalizers, category mapper, guarded upsert repo
 5. **Read API.** Activity service, cursor codec, insights service, controllers, DTOs
-6. **SSE and health.** `ActivityEventBus`, SSE controller, `/health`, metrics endpoint
+6. **SSE.** `ActivityEventBus`, SSE controller
 7. **Web scaffold.** Vite app, TanStack Query provider, Orval config, generated client, SSE hook
 8. **Web UI.** Feed including its pending state, metric tiles, visx donut, visx trend bar, layout
 9. **Tests and fixtures.** Recorded sandbox fixtures, `FakeCardProcessor`, the integration suite

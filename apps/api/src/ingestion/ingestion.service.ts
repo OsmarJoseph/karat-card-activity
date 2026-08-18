@@ -14,6 +14,16 @@ import { toProcessorCard, toProcessorCardholder } from '@/processor/stripe-card-
 /** `unsupported` is a deliberate skip, not a failure. */
 export type IngestOutcome = UpsertOutcome | 'unsupported'
 
+export interface IngestResult {
+  outcome: IngestOutcome
+  /**
+   * Set only when a row the dashboard reads actually moved, which is what decides
+   * whether connected browsers are nudged. A card event stores a card without changing
+   * any activity, so it leaves this null.
+   */
+  changedCardholderId: string | null
+}
+
 @Injectable()
 export class IngestionService {
   private readonly logger = new Logger(IngestionService.name)
@@ -23,24 +33,22 @@ export class IngestionService {
     @Inject(CARD_PROCESSOR) private readonly processor: CardProcessor,
   ) {}
 
-  async ingest(event: Stripe.Event): Promise<IngestOutcome> {
+  async ingest(event: Stripe.Event): Promise<IngestResult> {
     switch (event.type) {
       case 'issuing_authorization.created':
       case 'issuing_authorization.updated': {
         const normalized = normalizeAuthorization(event, event.data.object)
-        return this.activity.upsertAuthorization(
-          normalized.activity,
-          await this.resolveCard(normalized),
-        )
+        const card = await this.resolveCard(normalized)
+        const outcome = await this.activity.upsertAuthorization(normalized.activity, card)
+        return { outcome, changedCardholderId: card.cardholderId }
       }
 
       case 'issuing_transaction.created':
       case 'issuing_transaction.updated': {
         const normalized = normalizeTransaction(event, event.data.object)
-        return this.activity.upsertTransaction(
-          normalized.activity,
-          await this.resolveCard(normalized),
-        )
+        const card = await this.resolveCard(normalized)
+        const outcome = await this.activity.upsertTransaction(normalized.activity, card)
+        return { outcome, changedCardholderId: card.cardholderId }
       }
 
       case 'issuing_card.created':
@@ -51,12 +59,12 @@ export class IngestionService {
           card.cardholder.id,
         )
         await this.activity.ensureCard(toProcessorCard(card), cardholderId)
-        return 'applied'
+        return { outcome: 'applied', changedCardholderId: null }
       }
 
       default:
         this.logger.debug(`Ignoring ${event.type}`)
-        return 'unsupported'
+        return { outcome: 'unsupported', changedCardholderId: null }
     }
   }
 
