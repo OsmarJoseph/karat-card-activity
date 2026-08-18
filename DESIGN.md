@@ -170,6 +170,7 @@ Merged feed, newest first. Query: `cursor?`, `limit?` (default 25, max 100), `ki
       "formattedAmount": "$42.00",
       "merchantName": "BLUE BOTTLE COFFEE",
       "category": "food_drink",
+      "categoryLabel": "Food & Drink",
       "occurredAt": "2026-08-17T14:22:09Z",
     },
     {
@@ -210,6 +211,10 @@ Query: `period?` (`current_month|last_30d|last_90d`, default `current_month`)
       "count": 14,
     },
   ],
+  "trend": {
+    "bucket": "day",
+    "points": [{ "startsAt": "2026-08-01T00:00:00Z", "amount": 0 }],
+  },
 }
 ```
 

@@ -1,9 +1,10 @@
 import { fileURLToPath } from 'node:url'
+import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
 
   // One .env at the repo root serves every workspace, so the browser's API URL sits
   // beside the API's own configuration rather than in a second file.

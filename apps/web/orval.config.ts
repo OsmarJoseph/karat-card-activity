@@ -21,6 +21,8 @@ export default defineConfig({
       httpClient: 'fetch',
       override: {
         mutator: { path: './src/api/http.ts', name: 'request' },
+        // The feed pages by cursor, so it needs an infinite query rather than a flat one.
+        query: { useQuery: true, useInfinite: true, useInfiniteQueryParam: 'cursor' },
         // The mutator returns the parsed body, so the generated types must not promise
         // the status and headers envelope orval wraps responses in by default.
         fetch: { includeHttpResponseReturnType: false },

@@ -1,45 +1,62 @@
-import { useGetActivity, useGetInsights } from '@/api/generated'
+import { useState } from 'react'
+import { GetInsightsPeriod, useGetInsights } from '@/api/generated'
 import { describeError } from '@/api/http'
+import { ActivityFeed } from '@/components/ActivityFeed'
+import { Card } from '@/components/Card'
+import { CategoryDonut } from '@/components/CategoryDonut'
+import { MetricTiles } from '@/components/MetricTiles'
+import { PeriodSelector } from '@/components/PeriodSelector'
+import { SpendTrend } from '@/components/SpendTrend'
+import { StreamBadge } from '@/components/StreamBadge'
 import { useActivityStream } from '@/hooks/use-activity-stream'
 
-/**
- * A wiring check rather than the dashboard. What it proves is that the generated client,
- * the query provider and the event stream are connected end to end. Phase 8 replaces it
- * with the real feed, metric tiles and charts.
- */
 export function App() {
+  const [period, setPeriod] = useState<GetInsightsPeriod>(GetInsightsPeriod.current_month)
   const streamStatus = useActivityStream()
-  const activity = useGetActivity({ limit: 5 })
-  const insights = useGetInsights()
+  const insights = useGetInsights({ period })
 
   return (
-    <main>
-      <h1>Card activity</h1>
-      <p>stream: {streamStatus}</p>
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-xl font-semibold sm:text-2xl">Card activity</h1>
+          <StreamBadge status={streamStatus} />
+        </div>
+        <PeriodSelector value={period} onChange={setPeriod} busy={insights.isFetching} />
+      </header>
 
-      <h2>Feed</h2>
-      {activity.isPending && <p>loading</p>}
-      {activity.isError && <p>failed: {describeError(activity.error)}</p>}
-      {activity.data?.items.length === 0 && <p>no activity yet</p>}
-      {activity.data && activity.data.items.length > 0 && (
-        <ul>
-          {activity.data.items.map((item) => (
-            <li key={item.id}>
-              {item.occurredAt} {item.merchantName} {item.formattedAmount} {item.status}
-            </li>
-          ))}
-        </ul>
+      {insights.isError ? (
+        <Card className="mb-6">
+          <p className="text-sm text-offline">
+            Insights unavailable: {describeError(insights.error)}
+          </p>
+        </Card>
+      ) : (
+        // Undefined while loading, which is what each component renders a skeleton for.
+        <div className="mb-6">
+          <MetricTiles insights={insights.data} />
+        </div>
       )}
 
-      <h2>Insights</h2>
-      {insights.isPending && <p>loading</p>}
-      {insights.isError && <p>failed: {describeError(insights.error)}</p>}
-      {insights.data && (
-        <p>
-          {insights.data.period.label}: settled {insights.data.metrics.settledSpend}, pending{' '}
-          {insights.data.pending.count} worth {insights.data.pending.amount}
-        </p>
-      )}
-    </main>
+      <div className="grid gap-4 lg:grid-cols-[3fr_2fr]">
+        <div className="space-y-4">
+          <Card title="By category">
+            <CategoryDonut breakdown={insights.data?.breakdown} failed={insights.isError} />
+          </Card>
+          <Card
+            title="Settled spend"
+            action={
+              <span className="text-xs text-muted">by {insights.data?.trend.bucket ?? 'day'}</span>
+            }
+          >
+            <SpendTrend trend={insights.data?.trend} failed={insights.isError} />
+          </Card>
+        </div>
+
+        <Card title="Activity">
+          <ActivityFeed />
+        </Card>
+      </div>
+    </div>
   )
 }

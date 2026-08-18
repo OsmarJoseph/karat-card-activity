@@ -6,6 +6,13 @@ import { apiBaseUrl } from '@/lib/env'
 export type StreamStatus = 'connecting' | 'live' | 'offline'
 
 /**
+ * Taken from the generated factories rather than written out, so a path change in the API
+ * cannot leave this matching nothing.
+ */
+const ACTIVITY_PATH = getGetActivityQueryKey()[0]
+const INSIGHTS_PATH = getGetInsightsQueryKey()[0]
+
+/**
  * The stream says only that something changed, so the response is to refetch. Called once,
  * near the top of the tree: a second EventSource would mean a second connection.
  */
@@ -16,11 +23,17 @@ export function useActivityStream(): StreamStatus {
   useEffect(() => {
     const source = new EventSource(`${apiBaseUrl}/activity/stream`)
 
-    // Called with no arguments, the generated factories return just the path, and
-    // TanStack Query matches keys by prefix, so every cached page and period is covered.
+    /**
+     * Every cached query here is a projection of card activity, so they all go stale
+     * together. Matched on the path appearing anywhere in the key rather than as a prefix,
+     * because an infinite query's key begins with 'infinite' and a prefix match on the path
+     * alone silently misses it, which is exactly the feed.
+     */
     const refetchAll = (): void => {
-      void queryClient.invalidateQueries({ queryKey: getGetActivityQueryKey() })
-      void queryClient.invalidateQueries({ queryKey: getGetInsightsQueryKey() })
+      void queryClient.invalidateQueries({
+        predicate: (query) =>
+          query.queryKey.includes(ACTIVITY_PATH) || query.queryKey.includes(INSIGHTS_PATH),
+      })
     }
 
     let hasConnected = false
@@ -35,9 +48,8 @@ export function useActivityStream(): StreamStatus {
       hasConnected = true
     }
 
-    // EventSource retries on its own, so an error is only final once it has given up.
     source.onerror = () => {
-      setStatus(source.readyState === EventSource.CLOSED ? 'offline' : 'connecting')
+      setStatus('offline')
     }
 
     source.onmessage = (message: MessageEvent<string>) => {
