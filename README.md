@@ -1,13 +1,9 @@
 # Card activity
 
-A cardholder dashboard for a Stripe Issuing card programme. A swipe appears in the feed
-about a second after it happens, and the spend metrics move with it.
-
-The dashboard is the easy half. The interesting half is underneath it: Stripe delivers
-webhooks at least once, in no guaranteed order, and will redeliver an event that was
-already handled. The write path is built so none of that shows. An event can arrive twice,
-or late, or a capture can land before the authorization it settles, and the feed still
-shows exactly one row for one purchase with the right number beside it.
+A cardholder activity dashboard backed by Stripe Issuing. It shows a feed of card spend, a
+small set of metrics over the selected period, and a breakdown by merchant category, all
+served from a local store that Stripe's webhooks keep current, so new activity reaches the
+page within a few seconds of the swipe.
 
 ![The dashboard](./docs/dashboard.png)
 
@@ -21,6 +17,7 @@ Needs Docker and Node 20.19+, 22.12+ or 24+. No Stripe account is needed at any 
 ```bash
 cp .env.example .env      # the placeholders are enough, nothing to fill in
 npm install
+npm run db:generate       # Prisma client, which the seed imports
 npm run db:up             # Postgres 16, host port 5433
 npm run db:migrate
 npm run db:seed           # the one cardholder this deployment serves
@@ -70,6 +67,7 @@ With the API running, the spec is also served at
 | `npm run format:check`      | Prettier, repo wide                               |
 | `npm run db:up` / `db:down` | Starts or stops Postgres                          |
 | `npm run db:reset`          | Drops the volume, so migrate and seed again after |
+| `npm run db:generate`       | Prisma client, from `schema.prisma`               |
 | `npm run db:migrate`        | Applies migrations                                |
 | `npm run db:seed`           | Creates the configured cardholder                 |
 | `npm run webhook:seed`      | Sample activity, as signed webhooks               |

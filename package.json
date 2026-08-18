@@ -21,6 +21,7 @@
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v && docker compose up -d --wait",
+    "db:generate": "npm run db:generate --workspace @karat/api",
     "db:migrate": "npm run db:migrate --workspace @karat/api",
     "db:seed": "npm run db:seed --workspace @karat/api",
     "webhook:seed": "node apps/api/scripts/deliver-webhooks.mjs seed",
