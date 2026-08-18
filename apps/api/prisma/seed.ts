@@ -27,7 +27,9 @@ async function main(): Promise<void> {
       create: {
         stripeId,
         name: 'Awaiting Stripe sync',
-        email: 'awaiting-sync@example.invalid',
+        // Null rather than a fake address: the column is nullable precisely because
+        // Stripe does not require an email.
+        email: null,
       },
       // Re-running the seed must not clobber synced data.
       update: {},
