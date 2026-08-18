@@ -23,7 +23,8 @@
     "db:reset": "docker compose down -v && docker compose up -d --wait",
     "db:migrate": "npm run db:migrate --workspace @karat/api",
     "db:seed": "npm run db:seed --workspace @karat/api",
-    "db:demo": "docker compose exec -T postgres psql -U karat -d karat_card_activity -q -v ON_ERROR_STOP=1 -f - < apps/api/prisma/demo.sql",
+    "webhook:seed": "node apps/api/scripts/deliver-webhooks.mjs seed",
+    "webhook:live": "node apps/api/scripts/deliver-webhooks.mjs live",
     "db:studio": "npm run db:studio --workspace @karat/api",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

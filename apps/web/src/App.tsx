@@ -74,13 +74,17 @@ export function App() {
           </Card>
         </div>
 
-        <Card
-          title="Activity"
-          action={<span className="text-xs text-muted">Newest first</span>}
-          className="flex flex-col"
-        >
-          <ActivityFeed />
-        </Card>
+        {/* Out of flow once the columns sit side by side, so the row takes its height from
+            the charts and the feed scrolls inside what is left rather than running past them. */}
+        <div className="relative">
+          <Card
+            title="Activity"
+            action={<span className="text-xs text-muted">Newest first</span>}
+            className="flex flex-col lg:absolute lg:inset-0"
+          >
+            <ActivityFeed />
+          </Card>
+        </div>
       </div>
     </div>
   )

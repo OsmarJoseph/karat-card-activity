@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ActivityItemStatus, useGetActivityInfinite, type ActivityItem } from '@/api/generated'
 import { describeError } from '@/api/http'
 import { Skeleton } from '@/components/Skeleton'
@@ -5,6 +6,8 @@ import { CATEGORY_COLORS } from '@/lib/categories'
 import { formatDay, formatTimeOfDay } from '@/lib/format'
 
 const PAGE_SIZE = 15
+/** Enough to fill the card at the width where its height is pinned to the charts beside it. */
+const SKELETON_ROWS = [0, 1, 2, 3, 4, 5, 6, 7]
 
 export function ActivityFeed() {
   const feed = useGetActivityInfinite(
@@ -21,8 +24,8 @@ export function ActivityFeed() {
 
   if (feed.isPending) {
     return (
-      <ul className="flex-1 divide-y divide-line">
-        {[0, 1, 2, 3, 4].map((slot) => (
+      <ScrollList>
+        {SKELETON_ROWS.map((slot) => (
           <li key={slot} className="flex items-center gap-3 py-3">
             <Skeleton className="size-9 shrink-0 rounded-xl" />
             <div className="min-w-0 flex-1 space-y-2">
@@ -32,7 +35,7 @@ export function ActivityFeed() {
             <Skeleton className="h-3.5 w-14" />
           </li>
         ))}
-      </ul>
+      </ScrollList>
     )
   }
 
@@ -88,26 +91,69 @@ export function ActivityFeed() {
 
   return (
     <>
-      <ul className="flex-1 divide-y divide-line">
+      <ScrollList>
         {items.map((item) => (
           <Row item={item} key={item.id} />
         ))}
-      </ul>
+      </ScrollList>
 
+      {/* Outside the scroll region, so it stays reachable without reading to the bottom first. */}
       {feed.hasNextPage && (
         <button
           type="button"
           onClick={() => void feed.fetchNextPage()}
           disabled={feed.isFetchingNextPage}
-          className="mt-4 w-full rounded-xl border border-line py-2.5 text-[13px] font-medium text-ink-soft transition-colors hover:bg-sunk hover:text-ink disabled:opacity-60"
+          className="mt-4 w-full shrink-0 rounded-xl border border-line py-2.5 text-[13px] font-medium text-ink-soft transition-colors hover:bg-sunk hover:text-ink disabled:opacity-60"
         >
           {feed.isFetchingNextPage ? 'Loading…' : 'Load more'}
         </button>
       )}
       {!feed.hasNextPage && items.length > PAGE_SIZE && (
-        <p className="mt-4 text-center text-xs text-muted">That is everything.</p>
+        <p className="mt-4 shrink-0 text-center text-xs text-muted">That is everything.</p>
       )}
     </>
+  )
+}
+
+/**
+ * The scrolling half of the card: rows go here, the header and the load button stay put.
+ * Scrolling is left to the page below `lg`, where the card is a full-height stack item and
+ * a second scrollbar inside it would only trap the reader.
+ */
+function ScrollList({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLUListElement>(null)
+  const [more, setMore] = useState(false)
+
+  useEffect(() => {
+    const list = ref.current
+    if (!list) {
+      return
+    }
+
+    // Rounded heights can leave a fraction of a pixel behind at the end of a scroll.
+    const measure = () => setMore(list.scrollTop + list.clientHeight < list.scrollHeight - 1)
+    measure()
+
+    // Rows arriving from the next page re-run the effect; this is for the card being resized.
+    const observer = new ResizeObserver(measure)
+    observer.observe(list)
+    list.addEventListener('scroll', measure, { passive: true })
+
+    return () => {
+      observer.disconnect()
+      list.removeEventListener('scroll', measure)
+    }
+  }, [children])
+
+  return (
+    <ul
+      ref={ref}
+      className={`flex-1 divide-y divide-line lg:-mr-3 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:pr-3 ${
+        more ? 'fade-bottom' : ''
+      }`}
+    >
+      {children}
+    </ul>
   )
 }
 

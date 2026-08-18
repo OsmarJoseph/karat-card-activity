@@ -1,6 +1,6 @@
 import { scaleBand, scaleLinear } from '@visx/scale'
 import { Bar } from '@visx/shape'
-import { useState } from 'react'
+import { useState, type MouseEvent } from 'react'
 import type { SpendTrend as SpendTrendData } from '@/api/generated'
 import { Skeleton } from '@/components/Skeleton'
 import { useElementWidth } from '@/hooks/use-element-width'
@@ -48,7 +48,7 @@ function Plot({ trend }: { trend: SpendTrendData }) {
   // The height is fixed and the width comes from the layout, so the container reserves its
   // space on the first paint and the bars fill it once measured.
   return (
-    <div ref={ref} className="relative h-[176px] w-full">
+    <div ref={ref} className="relative h-[176px] w-full select-none">
       {width > AXIS_WIDTH && <Bars trend={trend} width={width} />}
     </div>
   )
@@ -79,9 +79,23 @@ function Bars({ trend, width }: { trend: SpendTrendData; width: number }) {
   const active = hovered === null ? null : trend.points[hovered]
   const unit = trend.bucket === 'week' ? 'week of' : ''
 
+  const centreOf = (startsAt: string) => (x(startsAt) ?? 0) + x.bandwidth() / 2
+  const firstCentre = centreOf(trend.points[0]?.startsAt ?? '')
+
   // Anchored to the hovered bar and kept inside the card, because a tooltip pinned to the
   // middle leaves the reader matching it to a bar by eye.
-  const activeCentre = active ? AXIS_WIDTH + (x(active.startsAt) ?? 0) + x.bandwidth() / 2 : 0
+  const activeCentre = active ? AXIS_WIDTH + centreOf(active.startsAt) : 0
+
+  /**
+   * The bucket nearest the pointer, measured off one target covering the whole plot. A target
+   * per bar left the padding between them unclaimed, so sweeping across the chart crossed a
+   * gap every bar and blinked the tooltip out.
+   */
+  const track = (event: MouseEvent<SVGRectElement>) => {
+    const offset = event.clientX - event.currentTarget.getBoundingClientRect().left
+    const nearest = Math.round((offset - firstCentre) / x.step())
+    setHovered(Math.min(Math.max(nearest, 0), trend.points.length - 1))
+  }
 
   return (
     <>
@@ -117,44 +131,42 @@ function Bars({ trend, width }: { trend: SpendTrendData; width: number }) {
             const valueY = y(point.amount)
             const left = x(point.startsAt) ?? 0
             const barWidth = x.bandwidth()
-            const empty = point.amount === 0
 
-            return (
-              <g key={point.startsAt}>
-                {/* An empty bucket keeps a stub, so a quiet stretch reads as part of the window. */}
-                {empty ? (
-                  <Bar
-                    x={left}
-                    y={zeroY - 1.25}
-                    width={barWidth}
-                    height={2.5}
-                    rx={1.25}
-                    fill="var(--color-line-strong)"
-                  />
-                ) : (
-                  <Bar
-                    x={left}
-                    y={Math.min(zeroY, valueY)}
-                    width={barWidth}
-                    height={Math.abs(valueY - zeroY)}
-                    rx={3}
-                    fill={point.amount < 0 ? 'var(--color-credit)' : 'var(--color-debit)'}
-                    opacity={hovered === null || hovered === index ? 1 : 0.4}
-                  />
-                )}
-                {/* A transparent full-height target, so hovering an empty bucket still works. */}
-                <rect
-                  x={left}
-                  y={0}
-                  width={barWidth}
-                  height={plotHeight}
-                  fill="transparent"
-                  onMouseEnter={() => setHovered(index)}
-                  onMouseLeave={() => setHovered(null)}
-                />
-              </g>
+            // An empty bucket keeps a stub, so a quiet stretch reads as part of the window.
+            return point.amount === 0 ? (
+              <Bar
+                key={point.startsAt}
+                x={left}
+                y={zeroY - 1.25}
+                width={barWidth}
+                height={2.5}
+                rx={1.25}
+                fill="var(--color-line-strong)"
+              />
+            ) : (
+              <Bar
+                key={point.startsAt}
+                x={left}
+                y={Math.min(zeroY, valueY)}
+                width={barWidth}
+                height={Math.abs(valueY - zeroY)}
+                rx={3}
+                fill={point.amount < 0 ? 'var(--color-credit)' : 'var(--color-debit)'}
+                opacity={hovered === null || hovered === index ? 1 : 0.4}
+              />
             )
           })}
+
+          {/* Transparent and full height, so an empty bucket answers to the pointer too. */}
+          <rect
+            x={0}
+            y={0}
+            width={plotWidth}
+            height={plotHeight}
+            fill="transparent"
+            onMouseMove={track}
+            onMouseLeave={() => setHovered(null)}
+          />
         </g>
 
         <text x={AXIS_WIDTH} y={HEIGHT - 5} className="fill-muted text-[11px]">

@@ -72,6 +72,12 @@
   animation: skeleton-sweep 1.4s linear infinite;
 }
 
+/* A list that carries on below the fold fades at that edge. macOS hides the scrollbar until
+   it is used, so the cut-off row is otherwise the only sign there is more to read. */
+@utility fade-bottom {
+  mask-image: linear-gradient(to bottom, black calc(100% - 28px), transparent);
+}
+
 @keyframes skeleton-sweep {
   from {
     background-position: -280px 0;
