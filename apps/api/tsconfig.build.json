@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // tsconfig.json exists to type-check, so emit is turned on only here.
+    "noEmit": false,
+    "rootDir": "src",
+    "outDir": "dist",
+    "removeComments": true,
+    "incremental": true,
+    "tsBuildInfoFile": "dist/.tsbuildinfo"
+  },
+  // Only application code is compiled. prisma.config.ts and prisma/seed.ts are run
+  // from source by their own tooling and must not land in dist.
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "**/*.spec.ts", "**/*.e2e-spec.ts"]
+}
