@@ -45,11 +45,6 @@ export function formatMoneyCompact(minorUnits: number): string {
   return compactMoney.format(toMajorUnits(minorUnits))
 }
 
-/** Signed, because a change of zero and a rise of zero should not look the same. */
-export function formatChange(percent: number): string {
-  return `${percent > 0 ? '+' : ''}${percent.toFixed(1)}%`
-}
-
 export function formatPercent(percent: number): string {
   return `${percent.toFixed(1)}%`
 }

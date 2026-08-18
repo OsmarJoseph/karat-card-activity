@@ -26,7 +26,7 @@ export function PeriodSelector({
     <div
       role="radiogroup"
       aria-label="Insights period"
-      className="inline-flex rounded-lg border border-line bg-surface p-0.5"
+      className="inline-flex gap-0.5 rounded-xl border border-line bg-surface p-1 shadow-xs"
     >
       {ORDER.map((period) => {
         const selected = period === value
@@ -39,10 +39,10 @@ export function PeriodSelector({
             // Disabled only while switching, so the current choice cannot be double fired.
             disabled={busy && !selected}
             onClick={() => onChange(period)}
-            className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
+            className={`rounded-[9px] px-3.5 py-1.5 text-sm transition-colors ${
               selected
-                ? 'bg-ink font-medium text-surface'
-                : 'text-ink-soft hover:bg-canvas disabled:opacity-50'
+                ? 'bg-ink font-semibold text-surface'
+                : 'font-medium text-ink-soft hover:bg-sunk hover:text-ink disabled:opacity-50'
             }`}
           >
             {LABELS[period]}

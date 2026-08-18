@@ -5,34 +5,89 @@
  * components as utility classes such as bg-surface and text-muted.
  */
 @theme {
-  --color-canvas: oklch(97.5% 0.005 250);
+  --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --color-canvas: oklch(97% 0.006 258);
   --color-surface: oklch(100% 0 0);
-  --color-line: oklch(91% 0.008 250);
-  --color-ink: oklch(24% 0.02 250);
-  --color-ink-soft: oklch(46% 0.015 250);
-  --color-muted: oklch(62% 0.012 250);
+  --color-sunk: oklch(98.2% 0.005 258);
+  --color-line: oklch(92.5% 0.006 258);
+  --color-line-strong: oklch(88% 0.008 258);
+  --color-ink: oklch(21% 0.024 258);
+  --color-ink-soft: oklch(44% 0.018 258);
+  /* As light as this can be and still clear 4.5:1 on surface, which the 12px labels need. */
+  --color-muted: oklch(50% 0.015 258);
 
   /* Money that left the account, money that came back, and money still on hold. */
-  --color-debit: oklch(30% 0.02 250);
+  --color-debit: oklch(38% 0.03 258);
   --color-credit: oklch(58% 0.14 155);
-  --color-pending: oklch(62% 0.15 60);
-  --color-offline: oklch(58% 0.19 25);
+  --color-pending: oklch(64% 0.14 62);
+  --color-offline: oklch(48% 0.17 25);
 
-  /* One slice colour per spend category, ordered so neighbours stay distinguishable. */
-  --color-cat-1: oklch(62% 0.17 255);
-  --color-cat-2: oklch(70% 0.15 165);
-  --color-cat-3: oklch(72% 0.16 70);
-  --color-cat-4: oklch(60% 0.19 320);
-  --color-cat-5: oklch(66% 0.16 200);
-  --color-cat-6: oklch(64% 0.19 25);
-  --color-cat-7: oklch(74% 0.13 120);
-  --color-cat-8: oklch(58% 0.16 290);
-  --color-cat-9: oklch(70% 0.14 40);
-  --color-cat-10: oklch(64% 0.13 225);
-  --color-cat-11: oklch(68% 0.12 145);
-  --color-cat-12: oklch(70% 0.02 250);
+  /* Darker twins of credit and pending, for text that has to pass contrast on surface. */
+  --color-credit-ink: oklch(45% 0.12 155);
+  --color-pending-ink: oklch(50% 0.12 58);
+
+  --color-focus: oklch(60% 0.16 258);
+
+  /* One slice colour per spend category, held to a common lightness and chroma so that
+     no neighbour shouts over another. */
+  --color-cat-1: oklch(62% 0.15 258);
+  --color-cat-2: oklch(66% 0.13 162);
+  --color-cat-3: oklch(70% 0.13 72);
+  --color-cat-4: oklch(60% 0.15 310);
+  --color-cat-5: oklch(64% 0.13 205);
+  --color-cat-6: oklch(63% 0.15 22);
+  --color-cat-7: oklch(68% 0.12 132);
+  --color-cat-8: oklch(58% 0.14 285);
+  --color-cat-9: oklch(66% 0.13 42);
+  --color-cat-10: oklch(62% 0.11 232);
+  --color-cat-11: oklch(64% 0.1 172);
+  --color-cat-12: oklch(70% 0.02 258);
+
+  --shadow-card:
+    0 1px 2px oklch(21% 0.024 258 / 0.05), 0 12px 28px -16px oklch(21% 0.024 258 / 0.2);
 }
 
-body {
-  @apply bg-canvas text-ink antialiased;
+@layer base {
+  body {
+    @apply bg-canvas text-ink antialiased;
+  }
+
+  /* Nothing styled focus before, so keyboard users were left with the browser default. */
+  :where(a, button):focus-visible {
+    @apply outline-2 outline-offset-2 outline-focus;
+  }
+}
+
+/* Placeholders sweep rather than blink, which reads as loading rather than as a fault. */
+@utility skeleton {
+  border-radius: var(--radius-md);
+  background-image: linear-gradient(
+    90deg,
+    var(--color-line) 0%,
+    var(--color-canvas) 50%,
+    var(--color-line) 100%
+  );
+  background-size: 280px 100%;
+  animation: skeleton-sweep 1.4s linear infinite;
+}
+
+@keyframes skeleton-sweep {
+  from {
+    background-position: -280px 0;
+  }
+  to {
+    background-position: 280px 0;
+  }
+}
+
+/* Every animation on the page is decoration, so all of it goes when asked. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
