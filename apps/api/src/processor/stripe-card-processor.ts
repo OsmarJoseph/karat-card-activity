@@ -21,7 +21,6 @@ const MAX_PAGE_SIZE = 100
 
 @Injectable()
 export class StripeCardProcessor implements CardProcessor {
-  private readonly logger = new Logger(StripeCardProcessor.name)
   private readonly stripe: Stripe
 
   constructor(config: AppConfigService) {
@@ -35,12 +34,7 @@ export class StripeCardProcessor implements CardProcessor {
 
   async getCardholder(stripeId: string): Promise<ProcessorCardholder | null> {
     try {
-      const cardholder = await this.stripe.issuing.cardholders.retrieve(stripeId)
-      return {
-        stripeId: cardholder.id,
-        name: cardholder.name,
-        email: cardholder.email,
-      }
+      return toProcessorCardholder(await this.stripe.issuing.cardholders.retrieve(stripeId))
     } catch (error: unknown) {
       if (isResourceMissing(error)) {
         return null
@@ -51,7 +45,7 @@ export class StripeCardProcessor implements CardProcessor {
 
   async getCard(stripeId: string): Promise<ProcessorCard | null> {
     try {
-      return this.toCard(await this.stripe.issuing.cards.retrieve(stripeId))
+      return toProcessorCard(await this.stripe.issuing.cards.retrieve(stripeId))
     } catch (error: unknown) {
       if (isResourceMissing(error)) {
         return null
@@ -74,42 +68,56 @@ export class StripeCardProcessor implements CardProcessor {
     const page = await this.stripe.issuing.cards.list(query)
 
     return {
-      items: page.data.map((card) => this.toCard(card)),
+      items: page.data.map(toProcessorCard),
       hasMore: page.has_more,
       // Stripe's cursor is the last id of the page, and only matters if more follow.
       nextCursor: page.has_more ? page.data.at(-1)?.id : undefined,
     }
   }
+}
 
-  private toCard(card: Stripe.Issuing.Card): ProcessorCard {
-    return {
-      stripeId: card.id,
-      cardholderStripeId: card.cardholder.id,
-      last4: card.last4,
-      brand: card.brand,
-      status: this.toCardStatus(card.status, card.id),
-      currency: card.currency,
-    }
+/**
+ * Stripe types card status as its three known values plus an open string, so it
+ * reserves the right to add more. An unknown status is stored as unusable rather
+ * than assumed active, because a card silently misfiled as spendable is worse than
+ * a noisy log line.
+ */
+export function mapStripeCardStatus(
+  status: Stripe.Issuing.Card.Status,
+  cardId: string,
+): CardStatus {
+  switch (status) {
+    case 'active':
+      return CardStatus.active
+    case 'inactive':
+      return CardStatus.inactive
+    case 'canceled':
+      return CardStatus.canceled
+    default:
+      new Logger('StripeCardMapping').warn(
+        `Unknown Stripe card status "${status}" on ${cardId}, storing as inactive`,
+      )
+      return CardStatus.inactive
   }
+}
 
-  /**
-   * Stripe types this field as its three known values plus an open string, so it
-   * reserves the right to add more. An unknown status is treated as unusable
-   * rather than assumed active, and it is logged, because a card silently
-   * misfiled as spendable is worse than a noisy log line.
-   */
-  private toCardStatus(status: Stripe.Issuing.Card.Status, cardId: string): CardStatus {
-    switch (status) {
-      case 'active':
-        return CardStatus.active
-      case 'inactive':
-        return CardStatus.inactive
-      case 'canceled':
-        return CardStatus.canceled
-      default:
-        this.logger.warn(`Unknown Stripe card status "${status}" on ${cardId}, storing as inactive`)
-        return CardStatus.inactive
-    }
+/** Shared with ingestion, which gets expanded cards nested inside events. */
+export function toProcessorCard(card: Stripe.Issuing.Card): ProcessorCard {
+  return {
+    stripeId: card.id,
+    cardholderStripeId: card.cardholder.id,
+    last4: card.last4,
+    brand: card.brand,
+    status: mapStripeCardStatus(card.status, card.id),
+    currency: card.currency,
+  }
+}
+
+export function toProcessorCardholder(cardholder: Stripe.Issuing.Cardholder): ProcessorCardholder {
+  return {
+    stripeId: cardholder.id,
+    name: cardholder.name,
+    email: cardholder.email,
   }
 }
 

@@ -87,7 +87,7 @@ cardholders
   id          pk
   stripe_id   uniq
   name
-  email
+  email       nullable, Stripe does not require one
   created_at
 
 cards
@@ -104,7 +104,7 @@ authorizations
   stripe_id          uniq
   card_id            fk to cards
   cardholder_id      fk to cardholders
-  amount             bigint, minor units
+  amount             integer, minor units
   currency
   status             pending | closed | reversed | expired
   merchant_name
@@ -121,7 +121,7 @@ transactions
   authorization_id   nullable, Stripe's id, no fk
   card_id            fk to cards
   cardholder_id      fk to cardholders
-  amount             bigint, signed: negative = refund
+  amount             integer, signed: negative = refund
   currency
   type               capture | refund
   merchant_name
@@ -144,7 +144,7 @@ stripe_events
 
 Decisions:
 
-- **Money is stored as `bigint` in the currency's smallest unit,** never as a float, since a rounding error in money is a bug waiting for the right input.
+- **Money is stored as an integer count of the currency's smallest unit,** never as a float, since a rounding error in money is a bug waiting for the right input. A 32 bit integer caps a single row at about 21 million dollars, far above any card transaction, and it stays inside the range JavaScript represents exactly, so amounts need no wider type and no special handling to reach the browser.
 - **Signed amounts on transactions,** with refunds stored negative, so settled spend is a plain sum and a refund cannot be left out of an aggregate.
 - **`authorization_id` is nullable and carries no foreign key,** because unlinked refunds have no authorization at all, and a transaction can arrive before the authorization it names, which a constraint would reject.
 
@@ -248,7 +248,7 @@ The write path claims to be idempotent and order-independent, so those are the t
 1. **Schema.** Prisma schema (Data model), initial migration, seed skeleton, Prisma module
 2. **Processor port.** `CardProcessor` interface, `StripeCardProcessor` (list + pagination), config module (env + cardholder id)
 3. **Webhook ingress.** Controller (raw body), signature guard, `stripe_events` repo, `rawBody: true` bootstrap
-4. **Ingestion.** Authorization and transaction normalizers, category mapper, guarded upsert repo, replay command
+4. **Ingestion.** Authorization and transaction normalizers, category mapper, guarded upsert repo
 5. **Read API.** Activity service, cursor codec, insights service, controllers, DTOs
 6. **SSE and health.** `ActivityEventBus`, SSE controller, `/health`, metrics endpoint
 7. **Web scaffold.** Vite app, TanStack Query provider, Orval config, generated client, SSE hook

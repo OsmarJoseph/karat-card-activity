@@ -1,4 +1,5 @@
 import { Controller, HttpCode, HttpStatus, Logger, Post, Req, UseGuards } from '@nestjs/common'
+import { IngestionService } from '@/ingestion/ingestion.service'
 import { StripeEventRepository } from '@/webhooks/stripe-event.repository'
 import {
   StripeSignatureGuard,
@@ -15,7 +16,10 @@ export interface WebhookAck {
 export class StripeWebhookController {
   private readonly logger = new Logger(StripeWebhookController.name)
 
-  constructor(private readonly events: StripeEventRepository) {}
+  constructor(
+    private readonly events: StripeEventRepository,
+    private readonly ingestion: IngestionService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.OK)
@@ -24,13 +28,24 @@ export class StripeWebhookController {
     const event = verifiedStripeEvent(request)
 
     const outcome = await this.events.record(event)
-    if (outcome === 'duplicate') {
-      this.logger.log(`Duplicate ${event.type} ${event.id}, already stored`)
-      return { received: true, duplicate: true }
+    const duplicate = outcome === 'duplicate'
+
+    // A duplicate is still normalized. The upsert is guarded, so redoing it is a
+    // no-op, and that makes Stripe's redelivery the retry for an attempt that
+    // stored the event but failed before normalizing it.
+    try {
+      const result = await this.ingestion.ingest(event)
+      await this.events.markProcessed(event.id)
+      this.logger.log(`${duplicate ? 'Replayed' : 'Received'} ${event.type} ${event.id}: ${result}`)
+    } catch (error: unknown) {
+      const reason = error instanceof Error ? error.message : 'unknown failure'
+      await this.events.markFailed(event.id, reason)
+      // Rethrown so Stripe redelivers. Either way the stored event keeps its failure
+      // reason, so a payload we could not handle is inspectable rather than lost.
+      this.logger.error(`Failed ${event.type} ${event.id}: ${reason}`)
+      throw error
     }
 
-    // Normalizing into the read model is the next phase; the event is durable now.
-    this.logger.log(`Stored ${event.type} ${event.id}`)
-    return { received: true, duplicate: false }
+    return { received: true, duplicate }
   }
 }

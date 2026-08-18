@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common'
-import type { Prisma, StripeEvent } from '@prisma/client'
+import type { Prisma } from '@prisma/client'
 import type Stripe from 'stripe'
 import { PrismaService } from '@/prisma/prisma.service'
 
@@ -45,15 +45,6 @@ export class StripeEventRepository {
     await this.prisma.stripeEvent.update({
       where: { id },
       data: { attempts: { increment: 1 }, lastError: error.slice(0, MAX_ERROR_LENGTH) },
-    })
-  }
-
-  /** Stored but never normalized, oldest first. Drives the replay command. */
-  findUnprocessed(limit: number): Promise<StripeEvent[]> {
-    return this.prisma.stripeEvent.findMany({
-      where: { processedAt: null },
-      orderBy: { receivedAt: 'asc' },
-      take: limit,
     })
   }
 }
