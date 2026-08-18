@@ -228,12 +228,6 @@ Raw body, verifying `stripe-signature`, and handling the created and updated eve
 
 ---
 
-## Test Plan
-
-The write path claims to be idempotent and order-independent, so those are the tests that get written: a duplicate event id producing one row, a transaction arriving before its authorization still showing one item, a stale update failing to regress a newer row, and an unlinked refund subtracting from settled spend. They run against Postgres in testcontainers, alongside unit tests for the category mapper, the cursor codec, and money formatting.
-
----
-
 ## Appendix A: Implementation Plan
 
 **Stack:** NestJS 11 and TypeScript, Postgres with Prisma, SSE, React with Vite and visx for charts.
@@ -245,7 +239,6 @@ The write path claims to be idempotent and order-independent, so those are the t
 - **Formatting:** Prettier at `semi: false, singleQuote: true, printWidth: 100`.
 - **Database:** `postgres:16-alpine` on host port 5433.
 - **API contract:** the nestjs-zod DTOs are the contract. The API's build emits them as `apps/api/openapi.json`, and Orval turns that into TanStack Query hooks, so the client's types come from the DTOs instead of being written a second time. The spec carries `/api/v1` as its server rather than on every path, which is what lets the browser hold the version in one base URL.
-- **Tests:** Jest for the API, Vitest for the web app.
 
 ### Phases
 
@@ -258,5 +251,4 @@ The write path claims to be idempotent and order-independent, so those are the t
 6. **SSE.** `ActivityEventBus`, SSE controller
 7. **Web scaffold.** Vite app, TanStack Query provider, Orval config, generated client, SSE hook
 8. **Web UI.** Feed including its pending state, metric tiles, visx donut, visx trend bar, layout
-9. **Tests and fixtures.** Recorded sandbox fixtures, `FakeCardProcessor`, the integration suite
-10. **Docs.** This doc, `README.md` (setup and demo script), project `CLAUDE.md`
+9. **Docs.** This doc, `README.md` (setup, demo script, and a map of the code)
